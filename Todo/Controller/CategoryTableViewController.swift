@@ -38,7 +38,9 @@ class CategoryTableViewController: UITableViewController {
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        
+        let destinationVC = segue.destination as! ToDoListViewController
+        let indexPath = tableView.indexPathForSelectedRow
+        destinationVC.selectedCategory = itemArray[(indexPath?.row)!]
     }
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
