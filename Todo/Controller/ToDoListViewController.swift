@@ -10,17 +10,21 @@ import UIKit
 import CoreData
 
 class ToDoListViewController: UITableViewController {
-
+    
     var itemArray = [Item]()
     let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var selectedCategory: Category? {
+        didSet{
+            loadData()
+        }
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        loadData()
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return itemArray.count
     }
@@ -30,7 +34,7 @@ class ToDoListViewController: UITableViewController {
         cell.textLabel?.text = itemArray[indexPath.row].title
         let item = itemArray[indexPath.row]
         cell.accessoryType = item.done ? .checkmark : .none
-    
+        
         return cell
     }
     
@@ -55,13 +59,21 @@ class ToDoListViewController: UITableViewController {
         self.tableView.reloadData()
     }
     
-    fileprivate func loadData(with request: NSFetchRequest<Item> = Item.fetchRequest()) {
-            do {
-                itemArray  = try context.fetch(request)
-            }
-            catch {
-                print("Error")
-            }
+    fileprivate func loadData(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate:NSPredicate? = nil) {
+        let basicPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", (selectedCategory?.name)!)
+        if let additionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [basicPredicate,additionalPredicate])
+        }
+        else{
+            request.predicate = basicPredicate
+        }
+        
+        do {
+            itemArray  = try context.fetch(request)
+        }
+        catch {
+            print("Error")
+        }
         tableView.reloadData()
     }
     
@@ -73,6 +85,7 @@ class ToDoListViewController: UITableViewController {
                 if let data = textField.text {
                     let newItem = Item(context: self.context)
                     newItem.title = data
+                    newItem.parentCategory = self.selectedCategory
                     self.itemArray.append(newItem)
                 }
                 self.saveData()
@@ -95,9 +108,9 @@ extension ToDoListViewController:UISearchBarDelegate {
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         let request : NSFetchRequest<Item> = Item.fetchRequest()
-        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        loadData(with: request)
+        loadData(with: request, predicate: predicate)
         
     }
     
